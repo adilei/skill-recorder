@@ -224,31 +224,37 @@ button:focus-visible,
   color: var(--brand-ink);
 }
 
+/* Status labels stay quiet: neutral uppercase mono text, with a single small
+   dot carrying the only colour. Keeps the brand coral as the one true accent
+   and avoids candy-coloured pills clashing on the selected card. */
 .tag {
   font-family: var(--mono);
   font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: var(--surface-2);
   color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.tag.ok {
-  background: rgba(var(--go-rgb), 0.16);
-  color: var(--go);
+.tag::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--line-strong); /* neutral dot — "analyzed" / default */
+  flex: none;
 }
 
-.tag.an {
-  background: var(--signal-dim);
-  color: var(--brand-ink);
+.tag.ok::before {
+  background: var(--go); /* approved — a quiet, deep success green */
 }
 
-.tag.warn {
-  background: var(--surface-2);
-  color: var(--muted);
+.tag.warn::before {
+  background: var(--faint); /* processing — gentle activity */
+  animation: pulse 1.4s ease-in-out infinite;
 }
 
 /* =========================================================================
@@ -614,7 +620,7 @@ button:focus-visible,
 
 .sess.on {
   border-color: var(--signal);
-  background: rgba(var(--brand-rgb), 0.08);
+  background: var(--surface-2);
 }
 
 .sess-top {

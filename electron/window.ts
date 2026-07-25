@@ -90,7 +90,7 @@ export function createLibraryWindow(recorder: BrowserWindow): BrowserWindow {
     minWidth: LIBRARY.floorWidth,
     minHeight: 480,
     show: false,
-    title: "Skill Recorder — Sessions",
+    title: "Skill Recorder: Sessions",
     backgroundColor: "#faf8f5",
     webPreferences: {
       preload: path.join(dirname, "preload.cjs"),
