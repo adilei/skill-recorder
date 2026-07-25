@@ -1,18 +1,55 @@
+/* Segoe Sans — Scout's brand typeface (bundled from the Scout app). */
+@font-face {
+  font-family: "Segoe Sans";
+  src: url("./assets/fonts/Segoe-sans.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Segoe Sans";
+  src: url("./assets/fonts/Segoe-sans-Italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
-  --deck: #111318;
-  --surface: #181b21;
-  --surface-2: #1f232b;
-  --line: #2a2f39;
-  --text: #e9ebf0;
-  --muted: #8b93a1;
-  --faint: #5c6472;
-  --rec: #ec4d3d;
-  --signal: #f0a641;
-  --signal-dim: rgba(240, 166, 65, 0.14);
-  --go: #43c26b;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  /* ── Scout skin (dark) ──────────────────────────────────────────────────
+     Warm-neutral charcoals + the Scout "lobster" coral accent, so this HUD
+     reads as part of the Scout family. Surfaces carry a faint warm tint
+     (hue ~24) instead of the old cold blue. */
+  --deck: hsl(24, 5%, 11%);        /* window backdrop */
+  --surface: hsl(24, 4%, 15%);     /* raised panels / rows */
+  --surface-2: hsl(24, 4%, 19%);   /* chips / inset controls */
+  --line: hsl(24, 4%, 27%);        /* Scout border-subtle (dark) */
+  --text: hsl(40, 7%, 90%);        /* warm off-white foreground */
+  --muted: hsl(30, 5%, 60%);       /* Scout foreground-tertiary (dark) */
+  --faint: hsl(30, 4%, 44%);
+
+  /* Lobster brand — Scout's signature coral (dark surfaces use the lighter,
+     more saturated tone: hsl(11, 100%, 68%) ≈ #FF7A5C). */
+  --brand: hsl(11, 100%, 68%);
+  --brand-hover: hsl(11, 100%, 63%);
+  --brand-fg: hsl(14, 45%, 9%);    /* dark warm text sits on the coral */
+  --brand-rgb: 255, 122, 92;
+
+  /* Record red — kept a true red for the "recording" affordance, retuned to
+     sit in the same warm family as the lobster accent. */
+  --rec: hsl(6, 88%, 63%);
+  --rec-rgb: 245, 92, 71;
+
+  /* --signal is the primary-action alias used throughout; it now IS the brand
+     coral (previously an amber). Everything referencing it inherits the shift. */
+  --signal: var(--brand);
+  --signal-dim: rgba(var(--brand-rgb), 0.15);
+  --go: hsl(157, 52%, 48%);        /* Scout success (dark) */
+  --go-rgb: 59, 186, 137;
+
+  --sans: "Segoe Sans", Aptos, Calibri, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --mono: Consolas, "SF Mono", "JetBrains Mono", Menlo, "Courier New", monospace;
 }
 
 * {
@@ -74,14 +111,16 @@ button:focus-visible,
 /* Amber "signal" call-to-action — the primary action colour. */
 .record-cta {
   background: var(--signal);
-  color: #1a1206;
+  color: var(--brand-fg);
   font-weight: 600;
   font-size: 13px;
   padding: 9px 16px;
+  box-shadow: 0 2px 12px -3px rgba(var(--brand-rgb), 0.4);
 }
 
 .record-cta:not(:disabled):hover {
-  filter: brightness(1.06);
+  background: var(--brand-hover);
+  box-shadow: 0 3px 16px -3px rgba(var(--brand-rgb), 0.5);
 }
 
 .ghost {
@@ -170,7 +209,7 @@ button:focus-visible,
 }
 
 .conf.high {
-  background: rgba(67, 194, 107, 0.18);
+  background: rgba(var(--go-rgb), 0.18);
   color: var(--go);
 }
 
@@ -180,8 +219,8 @@ button:focus-visible,
 }
 
 .conf.low {
-  background: rgba(236, 77, 61, 0.16);
-  color: #f2a29a;
+  background: rgba(var(--rec-rgb), 0.16);
+  color: hsl(6, 80%, 78%);
 }
 
 .tag {
@@ -197,7 +236,7 @@ button:focus-visible,
 }
 
 .tag.ok {
-  background: rgba(67, 194, 107, 0.16);
+  background: rgba(var(--go-rgb), 0.16);
   color: var(--go);
 }
 
@@ -240,7 +279,7 @@ button:focus-visible,
   height: 10px;
   border-radius: 50%;
   background: var(--signal);
-  box-shadow: 0 0 9px rgba(240, 166, 65, 0.55);
+  box-shadow: 0 0 9px rgba(var(--brand-rgb), 0.5);
 }
 
 .mark-text {
@@ -272,7 +311,7 @@ button:focus-visible,
 
 .rec-chip.rec .lamp {
   background: var(--rec);
-  box-shadow: 0 0 8px rgba(236, 77, 61, 0.7);
+  box-shadow: 0 0 8px rgba(var(--rec-rgb), 0.7);
   animation: pulse 1.2s infinite ease-in-out;
 }
 
@@ -289,7 +328,7 @@ button:focus-visible,
   width: 76px;
   height: 76px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 40%, #23262e, #14161b);
+  background: radial-gradient(circle at 50% 40%, #2b2825, #171512);
   border: 1px solid var(--line);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px rgba(0, 0, 0, 0.45);
   display: grid;
@@ -297,7 +336,7 @@ button:focus-visible,
 }
 
 .record:hover {
-  border-color: #3a4150;
+  border-color: #4a4440;
   transform: translateY(-1px);
 }
 
@@ -310,12 +349,12 @@ button:focus-visible,
   height: 26px;
   border-radius: 50%;
   background: var(--rec);
-  box-shadow: 0 0 0 4px rgba(236, 77, 61, 0.16);
+  box-shadow: 0 0 0 4px rgba(var(--rec-rgb), 0.16);
   transition: width 0.18s ease, height 0.18s ease, border-radius 0.18s ease;
 }
 
 .record.on {
-  border-color: rgba(236, 77, 61, 0.5);
+  border-color: rgba(var(--rec-rgb), 0.5);
   animation: recpulse 1.7s ease-in-out infinite;
 }
 
@@ -328,11 +367,11 @@ button:focus-visible,
 @keyframes recpulse {
   0%,
   100% {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 0 rgba(236, 77, 61, 0),
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 0 rgba(var(--rec-rgb), 0),
       0 8px 20px rgba(0, 0, 0, 0.45);
   }
   50% {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 7px rgba(236, 77, 61, 0.1),
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 7px rgba(var(--rec-rgb), 0.1),
       0 8px 20px rgba(0, 0, 0, 0.45);
   }
 }
@@ -367,7 +406,7 @@ button:focus-visible,
 }
 
 .marker:not(:disabled):hover {
-  border-color: #3a4150;
+  border-color: #4a4440;
   color: var(--text);
 }
 
@@ -417,7 +456,7 @@ button:focus-visible,
 
 .seg.on {
   background: var(--signal);
-  color: #1a1206;
+  color: var(--brand-fg);
   font-weight: 600;
 }
 
@@ -569,12 +608,12 @@ button:focus-visible,
 }
 
 .sess:hover {
-  border-color: #3a4150;
+  border-color: #4a4440;
 }
 
 .sess.on {
   border-color: var(--signal);
-  background: #201d16;
+  background: rgba(var(--brand-rgb), 0.08);
 }
 
 .sess-top {
@@ -690,9 +729,9 @@ button:focus-visible,
 }
 
 .analysis-error {
-  background: rgba(236, 77, 61, 0.12);
-  border: 1px solid rgba(236, 77, 61, 0.5);
-  color: #f2a29a;
+  background: rgba(var(--rec-rgb), 0.12);
+  border: 1px solid rgba(var(--rec-rgb), 0.5);
+  color: hsl(6, 80%, 78%);
   border-radius: 8px;
   padding: 9px 11px;
   font-size: 12px;
