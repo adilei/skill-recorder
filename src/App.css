@@ -414,19 +414,6 @@ button:focus-visible,
   min-height: 15px;
 }
 
-.marker {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 13px;
-  padding: 9px;
-}
-
-.marker:not(:disabled):hover {
-  border-color: var(--line-strong);
-  color: var(--text);
-}
-
 .narrate {
   display: flex;
   align-items: center;

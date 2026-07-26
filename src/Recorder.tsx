@@ -64,11 +64,6 @@ export function Recorder() {
     setStatus(await window.skillRecorder.status());
   }, [recording, narrate]);
 
-  const addMarker = useCallback(async () => {
-    const note = window.prompt("Marker: what are you doing right now?");
-    if (note) await window.skillRecorder.marker(note);
-  }, []);
-
   const openLibrary = useCallback(() => {
     void window.skillRecorder.openLibrary();
   }, []);
@@ -140,10 +135,6 @@ export function Recorder() {
         <span className={`narrate-switch ${narrate ? "on" : ""}`} aria-hidden>
           <span className="narrate-knob" />
         </span>
-      </button>
-
-      <button className="marker" onClick={addMarker} disabled={!recording}>
-        Add marker
       </button>
 
       <button className="privacy-note" onClick={() => setShowPrivacy(true)}>

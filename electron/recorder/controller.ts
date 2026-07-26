@@ -160,6 +160,10 @@ export class RecorderController {
     return { ok: true, sessionId: meta.id };
   }
 
+  // Marker capture is intentionally retained even though the "Add marker" HUD
+  // button was removed in favor of voice narration (see docs/future-features.md).
+  // The full path (IPC -> event bus -> bundle -> describer) stays wired so a
+  // future UI (e.g. a silent hotkey flag) can re-enable it without backend work.
   marker(note: string): MarkerResult {
     if (!this.store) return { ok: false, error: "Not recording" };
     this.bus.publish({ type: EventType.Marker, source: "user", payload: { note } });
