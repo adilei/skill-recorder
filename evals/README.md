@@ -113,6 +113,67 @@ export const myScenario: Scenario = {
 };
 ```
 
+## Builder evals (`evals/builder/`)
+
+A second, smaller harness that guards the **final stage** — the builder that
+generalizes an approved analysis into a Scout artifact — rather than the
+describer. It exists because of a real regression: when generalizing GitHub work,
+the builder preferred driving the **browser (Playwright)** instead of the **`gh`
+CLI**, even though Scout runs on the user's own Mac/Windows device where `gh` is
+installed and authenticated.
+
+```bash
+npm run eval:builder                       # all builder scenarios
+npm run eval:builder -- --only=github-issue-triage
+npm run eval:builder -- --keep             # print the temp sessions dir
+npm run eval:builder -- --model=<model-id> # override the builder model
+```
+
+**How it isolates the builder.** Each scenario seeds a **fixed, approved
+`Analysis`** (plus a minimal valid `bundle.json`) into a temp sessions dir, then
+runs the real `AutomationBuilder.build()` for a chosen `architecture` and
+`platform` (macOS or Windows). Seeding a frozen analysis removes describer
+variance, so a failure points squarely at the builder's instructions/catalogue.
+Only the plan's **steps** (`label` + `prompt`) are scored — the summary and
+generalization prose are intentionally excluded, so the builder isn't penalized
+for *explaining* which tool it avoided.
+
+**Rubric** (`score.ts`): a scenario passes only if the steps satisfy every
+`mustUseAny` group (each group is a set of synonyms; at least one must appear) and
+contain **none** of the `forbidden` tokens — all case-insensitive substring
+matches over the step `label` + `prompt` text. A forbidden hit fails the scenario
+outright.
+
+**Coverage.** Ten scenarios (`scenarios.ts` + `native-tool-scenarios.ts`), spanning
+macOS and Windows. Two guard the original **gh-vs-browser** regression directly
+(GitHub issue triage · darwin, stale-PR nudge · win32); the other eight mirror the
+describer eval set (`evals/scenarios/*`) so the generalization stage is guarded for
+every task type. Each rubric encodes the right native capability for its task, in
+one of two flavours:
+
+- **Native-tool-wins, browser forbidden** — the task maps to an unambiguous
+  first-class CLI/tool, so the browser is a genuine wrong answer. `release-notes`
+  and the two GitHub scenarios require `gh` (merged PRs, issues, PRs) and forbid
+  `browser_`/`playwright`; `windows-deploy` requires the `az` CLI (+ the `xlsx`
+  skill for the log) and forbids the browser. These are the strong "prefer the
+  device CLI over the UI" guards.
+- **Assert the native path, don't forbid a legitimate browser** — for web-read
+  tasks (`web-to-spreadsheet`, `invoice-extract`, `research-compile`) the rubric
+  requires `web_fetch` (and the `xlsx`/`docx` skill for the output) but does **not**
+  forbid the browser: preferring `web_fetch` while documenting a browser fallback
+  for a page that may need a login is exactly what we want, and a pure-browser
+  regression is still caught because `web_fetch` would be absent. Genuinely
+  browser-driven tasks (`expense-report` → Amex/Expensify, `lead-to-crm` →
+  Salesforce/LinkedIn have no CLI/API) don't forbid the browser at all; instead
+  they pin the one sub-step that *is* native — reading the local PDF receipts
+  (`view`/pdf), and reading the mailbox via `workiq_*` rather than the Mail UI.
+
+This is the suite that drove the catalogue fix in
+`electron/skillbuilder/scout-catalog.ts` (prefer first-class device CLIs — above
+all `gh` — over the browser, platform-aware for zsh/bash vs PowerShell). When you
+add a describer scenario, add the matching builder scenario so the pair stays in
+lockstep.
+
 ## Mock pages (`evals/mocks/`)
 
 Static, self-contained HTML fixtures matching the scenarios (`pricing.html`,
