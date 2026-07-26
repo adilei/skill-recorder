@@ -50,7 +50,18 @@ async function build(): Promise<AsrPipeline | null> {
   tf.env.allowLocalModels = false;
 
   try {
-    const pipe = await tf.pipeline("automatic-speech-recognition", MODEL_ID, { dtype: DTYPE });
+    const pipe = await tf.pipeline("automatic-speech-recognition", MODEL_ID, {
+      dtype: DTYPE,
+      // onnxruntime-node's CPU memory arena SIGTRAPs (hard native crash) under
+      // Electron's runtime, in both the main and utility processes. Disabling the
+      // arena is the single option that avoids it; unlike throttling threads or
+      // graph optimization it keeps multithreading and fusions on, so transcription
+      // stays near-native speed (~12s for 77s of audio) with no change in output.
+      // If this ever needs more isolation, move inference to a forked utility
+      // process (it still needs this flag) so a future native fault can't take the
+      // app down with it.
+      session_options: { enableCpuMemArena: false },
+    });
     return pipe as unknown as AsrPipeline;
   } catch (err) {
     log.warn("failed to load whisper model (offline + not yet cached?):", err instanceof Error ? err.message : err);
