@@ -21,6 +21,7 @@
     "eval:builder": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs evals/builder/run.ts",
     "eval:skill": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs evals/skillbuilder/run.ts",
     "dist": "vite build && electron-builder",
+    "icons": "node scripts/generate-icons.mjs",
     "start": "electron ."
   },
   "dependencies": {
@@ -80,6 +81,7 @@
           ]
         }
       ],
+      "icon": "build/icon.icns",
       "identity": "-",
       "hardenedRuntime": false,
       "category": "public.app-category.developer-tools",
@@ -88,6 +90,7 @@
       }
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "portable",

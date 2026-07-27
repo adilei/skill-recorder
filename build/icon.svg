@@ -1,0 +1,31 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Skill Recorder app icon. Source of truth: run `npm run icons` to regenerate
+       icon.png / icon.icns / icon.ico from this file. The mark is the app's
+       signature "record" transport in the lobster-coral brand (see src/App.css). -->
+  <defs>
+    <linearGradient id="tile" x1="180" y1="120" x2="880" y2="920" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F15A38"/>
+      <stop offset="1" stop-color="#C22A14"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="512" y1="80" x2="512" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="512" cy="470" r="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0.60" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3A0A00" stop-opacity="0.22"/>
+    </radialGradient>
+  </defs>
+
+  <!-- App tile (rounded-square, ~23% radius ≈ macOS squircle) -->
+  <rect x="80" y="80" width="864" height="864" rx="198" fill="url(#tile)"/>
+  <rect x="80" y="80" width="864" height="864" rx="198" fill="url(#sheen)"/>
+  <rect x="80" y="80" width="864" height="864" rx="198" fill="url(#vignette)"/>
+
+  <!-- Recording halo (the "capture" pulse) -->
+  <circle cx="512" cy="512" r="326" stroke="#FFFFFF" stroke-opacity="0.36" stroke-width="22"/>
+  <circle cx="512" cy="512" r="270" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="14"/>
+
+  <!-- Record dot -->
+  <circle cx="512" cy="512" r="196" fill="#FFFFFF"/>
+</svg>
