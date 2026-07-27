@@ -53,9 +53,36 @@ activity" panel shows exactly what's collected:
 On first launch macOS will prompt for **Screen Recording** (required) and, if you use
 Narrate, **Microphone** permission.
 
+## Install the preview
+
+Portable, **no-install** preview candidates are built by CI for a limited internal
+preview. Grab them from the repo's **Releases** (tagged pre-releases) or, for an
+untagged run, from the **Actions → Build portable candidates** run's artifacts.
+
+These builds are **unsigned** (internal preview), so each OS shows a one-time warning:
+
+- **macOS (Apple Silicon / arm64)** — unzip `skill-recorder-<version>-arm64.zip`, then
+  **right-click the app → Open** and confirm once. If macOS still says the app is
+  damaged / can't be opened, clear the quarantine flag and reopen:
+  ```bash
+  xattr -dr com.apple.quarantine "Skill Recorder.app"
+  ```
+- **Windows (x64)** — run `skill-recorder-<version>-x64.exe`. It is a single **portable**
+  executable — nothing is installed. If **SmartScreen** appears, choose
+  **More info → Run anyway**.
+
+> **Signing:** these candidates are not code-signed or notarized, so the one-time bypass
+> above is expected. Real signing is a shipping-time concern, not part of this preview.
+>
+> **Bundled ffmpeg (licensing):** the preview currently bundles a GPL `ffmpeg` build.
+> Swapping it for an LGPL build is tracked in
+> [#11](https://github.com/adilei/skill-recorder/issues/11); native Windows **arm64**
+> packaging is tracked in [#20](https://github.com/adilei/skill-recorder/issues/20).
+
 ## Run it (development)
 
-> There is no packaged/released download yet — run it from source.
+> Prefer a ready-to-run build? See **[Install the preview](#install-the-preview)**.
+> To hack on Skill Recorder, run it from source:
 
 ```bash
 npm install
@@ -71,7 +98,7 @@ Other useful scripts:
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run build       # typecheck + production build (dist/ + dist-electron/)
-npm run dist        # build a distributable via electron-builder (dmg/zip on macOS)
+npm run dist        # portable build via electron-builder (arm64 .zip on macOS, portable .exe on Windows)
 npm start           # run the last build with `electron .`
 ```
 

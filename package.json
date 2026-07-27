@@ -4,6 +4,10 @@
   "description": "Records a user's on-screen work session and derives a structured description for building AI-agent skills.",
   "author": "Skill Recorder",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adilei/skill-recorder.git"
+  },
   "private": true,
   "type": "module",
   "main": "dist-electron/main.js",
@@ -43,6 +47,17 @@
   "build": {
     "appId": "com.skillrecorder.app",
     "productName": "Skill Recorder",
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "${name}-${version}-${arch}.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "adilei",
+        "repo": "skill-recorder"
+      }
+    ],
     "files": [
       "dist/**",
       "dist-electron/**",
@@ -58,9 +73,15 @@
     ],
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
       ],
+      "identity": "-",
+      "hardenedRuntime": false,
       "category": "public.app-category.developer-tools",
       "extendInfo": {
         "NSMicrophoneUsageDescription": "Skill Recorder uses your microphone only while you turn on Narrate during a recording, to transcribe your spoken narration on this computer."
@@ -69,17 +90,12 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": [
             "x64"
           ]
         }
       ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true
     }
   }
 }

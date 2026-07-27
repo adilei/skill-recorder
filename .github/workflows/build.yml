@@ -1,0 +1,112 @@
+name: Build portable candidates
+
+# Portable, no-install preview builds for a limited private preview.
+#   macOS   -> arm64 .zip        (unzip -> "Skill Recorder.app")
+#   Windows -> x64 portable .exe (single self-contained executable)
+#
+# Unsigned by design: macOS arm64 carries only an automatic *ad-hoc* signature
+# (mac.identity "-" in package.json) so it launches; there is no Developer ID or
+# notarization, and Windows is not signed. Testers do a one-time Gatekeeper /
+# SmartScreen bypass (see README "Install the preview").
+#
+# Forward-compatible extension points (tracked in issues #20 / #11):
+#   * Add a Windows-arm64 leg  -> append a matrix entry:
+#       { os: windows-11-arm, name: Windows-arm64, eb_args: "--win --arm64" }
+#     (windows-11-arm runners are free on this public repo) and add "arm64" to
+#     win.target in package.json. Requires a win-arm64-capable LGPL ffmpeg first
+#     (ffmpeg-static ships no Windows arm64 binary) -> issue #11.
+#   * Turn on real signing -> add the CSC_*/APPLE_* (mac) or Azure win.sign
+#     secrets; the workflow needs no structural change.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest # Apple Silicon (arm64)
+            name: macOS-arm64
+            eb_args: "--mac"
+          - os: windows-latest # x64
+            name: Windows-x64
+            eb_args: "--win"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck + build (renderer + electron main)
+        run: npm run build
+
+      - name: Package portable app
+        run: npx --no-install electron-builder ${{ matrix.eb_args }} --publish never
+        env:
+          # Unsigned preview. macOS arm64 still gets the automatic ad-hoc signature
+          # from mac.identity "-"; this only disables Developer ID auto-discovery.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-recorder-${{ matrix.name }}
+          path: |
+            release/*.exe
+            release/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish pre-release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish GitHub pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          mapfile -t files < <(find artifacts -type f \( -name '*.exe' -o -name '*.zip' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No build artifacts (.exe/.zip) found to publish" >&2
+            exit 1
+          fi
+          printf 'Attaching: %s\n' "${files[@]}"
+          notes=$'Unsigned **portable** preview builds \u2014 nothing to install.\n\n- **macOS (Apple Silicon)**: unzip, then right-click the app \u2192 **Open** (or run `xattr -dr com.apple.quarantine "Skill Recorder.app"`).\n- **Windows (x64)**: run the `.exe`; if SmartScreen appears, choose **More info \u2192 Run anyway**.\n\n> Internal preview candidates \u2014 not code-signed.'
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "Skill Recorder $TAG (preview)" \
+            --prerelease \
+            --notes "$notes" \
+            "${files[@]}"
