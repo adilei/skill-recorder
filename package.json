@@ -14,13 +14,15 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "typecheck:evals": "tsc --noEmit -p evals/tsconfig.json",
-    "test": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs --test common/audio.test.ts common/microphone.test.ts common/narration.test.ts electron/recording-controls-bounds.test.ts electron/recorder/controller.test.ts electron/frames/extractor.test.ts electron/narration/audio-analysis.test.ts electron/narration/analyze-gate.test.ts electron/narration/transcribe.test.ts electron/narration/whisper.test.ts electron/sessions.test.ts electron/debug-bundle.test.ts",
+    "test": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs --test common/audio.test.ts common/microphone.test.ts common/narration.test.ts electron/recording-controls-bounds.test.ts electron/recording-privacy.test.ts electron/recorder/controller.test.ts electron/frames/extractor.test.ts electron/narration/audio-analysis.test.ts electron/narration/analyze-gate.test.ts electron/narration/transcribe.test.ts electron/narration/whisper.test.ts electron/sessions.test.ts electron/debug-bundle.test.ts",
     "eval": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs evals/run.ts",
     "eval:builder": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs evals/builder/run.ts",
     "eval:skill": "node --experimental-transform-types --no-warnings --import ./evals/register.mjs evals/skillbuilder/run.ts",
     "dist": "node scripts/assert-generic-dist-platform.mjs && vite build && electron-builder --publish never",
     "dist:win:x64": "node scripts/assert-native-windows-arch.mjs x64 && vite build && electron-builder --publish never --win nsis --x64",
     "dist:win:arm64": "node scripts/assert-native-windows-arch.mjs arm64 && vite build && electron-builder --publish never --win nsis --arm64",
+    "dist:portable:mac": "vite build && electron-builder --publish never --mac zip",
+    "dist:portable:win": "node scripts/assert-native-windows-arch.mjs x64 && vite build && electron-builder --publish never --win portable --x64",
     "start": "electron ."
   },
   "dependencies": {
@@ -74,6 +76,8 @@
         "dmg",
         "zip"
       ],
+      "identity": "-",
+      "hardenedRuntime": false,
       "extraResources": [
         {
           "from": "node_modules/electron/dist/LICENSE",
