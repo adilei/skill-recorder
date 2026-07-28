@@ -452,16 +452,16 @@ function AnalysisWorkspace({
 
       <div className="ws-body">
         {voicePending && (
-          <div className="voice-card">
+          <div className="voice-card quiet">
             <div className="voice-card-copy">
-              <strong>Voice not transcribed yet</strong>
+              <strong>Voice narration</strong>
               <span>
                 {voiceBusy
                   ? narrationWorkLabel(narrationStatus)
-                  : "Your audio is saved. Transcription runs locally and can be done later."}
+                  : "Analyze includes your saved voice automatically — it transcribes first. You can also transcribe it now."}
               </span>
-              {!voiceBusy && narrationStatus?.model !== "ready" && (
-                <span>The first use requires a one-time ~250 MB download.</span>
+              {!voiceBusy && narrationStatus?.model !== "ready" && !voiceError && (
+                <span>First use downloads a one-time ~250 MB model.</span>
               )}
               {!voiceBusy && voiceError && (
                 <span className="voice-card-error">{voiceError}</span>
@@ -475,7 +475,7 @@ function AnalysisWorkspace({
               {voiceBusy || modelBusy
                 ? narrationWorkLabel(narrationStatus)
                 : narrationStatus?.model === "ready"
-                  ? "Transcribe voice"
+                  ? "Transcribe now"
                   : narrationStatus?.model === "error"
                     ? "Try again"
                     : "Download & transcribe"}
@@ -530,7 +530,8 @@ function AnalysisWorkspace({
             <p>See what you did in this recording, step by step.</p>
             {voicePending && (
               <p className="voice-analysis-note">
-                Voice is not transcribed yet. Analyzing now will not include it, but your audio will be kept.
+                Your voice is transcribed first, then analyzed. The first run downloads a ~250 MB
+                voice model once.
               </p>
             )}
             <button className="record-cta" onClick={run}>
@@ -542,11 +543,19 @@ function AnalysisWorkspace({
         {analyzing && (
           <div className="status-line">
             <span className="spinner" />
-            <span className="status-text">{statusLine || "Working…"}</span>
+            <span className="status-text">
+              {voiceBusy ? narrationWorkLabel(narrationStatus) : statusLine || "Working…"}
+            </span>
             <button className="linky status-cancel" onClick={cancel}>
               Cancel
             </button>
           </div>
+        )}
+
+        {analyzing && narrationStatus?.phase === "downloading" && (
+          <p className="voice-analysis-note">
+            First analysis downloads the ~250 MB voice model once — later runs skip this.
+          </p>
         )}
 
         {error && <div className="analysis-error">{error}</div>}
