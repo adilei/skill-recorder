@@ -1,6 +1,7 @@
 import type { Analysis, AnalysisFeedback, AnalysisStep, Confidence } from "./analysis";
 import type { AutomationPlan, BuiltAutomation } from "./automation";
 import type { MicrophoneDevice } from "./microphone";
+import type { NarrationLanguage } from "./narration";
 import type { BuiltSkill, SkillArchitecture, SkillPlan } from "./skill";
 import type { RecorderState } from "./types";
 
@@ -24,6 +25,8 @@ export interface SessionSummary {
   hasVideo: boolean;
   /** True when the user opted into narration and usable audio was saved. */
   hasAudio: boolean;
+  /** Selected source language for saved audio, or null when no audio exists. */
+  narrationLanguage: NarrationLanguage | null;
   /** True once transcription completed, including recordings with no detected speech. */
   hasNarration: boolean;
   narrationSegmentCount: number | null;
@@ -68,6 +71,8 @@ export interface RecorderStatus {
   state: RecorderState;
   sessionId: string | null;
   startedAt: number | null;
+  /** Source language fixed for the active recording's narration. */
+  narrationLanguage: NarrationLanguage;
   eventCount: number;
   transition: "none" | "starting" | "stopping" | "discarding";
   microphone: {
@@ -126,7 +131,7 @@ export interface SkillBuildProgress {
 /** Start a build (or refine one) for a session's analysis. */
 export interface SkillBuildInput {
   sessionId: string;
-  /** Target architecture (only "scout" is enabled today). */
+  /** Target architecture (Scout or Cowork). */
   architecture: SkillArchitecture;
   /** Natural-language refinement for the current plan; omit for the first pass. */
   feedback?: string;
@@ -139,12 +144,23 @@ export interface SkillPlanResult {
   error?: string;
 }
 
-/** Result of finalizing + exporting a skill. */
+/**
+ * Where a built skill lands:
+ * - **install** — write it into the target agent's live skills folder (Scout auto-loads it).
+ * - **export** — download it to a folder the user picks (the only option for Cowork).
+ */
+export type SkillPlacement = "install" | "export";
+
+/** Result of finalizing + placing a skill. */
 export interface SkillCreateResult {
   ok: boolean;
   skill?: BuiltSkill;
-  /** Absolute path of the exported SKILL.md. */
+  /** Absolute path of the placed SKILL.md. */
   path?: string;
+  /** How the skill was placed (echoed back for the done screen). */
+  placement?: SkillPlacement;
+  /** True when the user dismissed the export destination dialog — a cancel, not an error. */
+  canceled?: boolean;
   error?: string;
 }
 
@@ -160,7 +176,7 @@ export interface AutomationBuildProgress {
 /** Start an automation build (or refine one) for a session's analysis. */
 export interface AutomationBuildInput {
   sessionId: string;
-  /** Target architecture (only "scout" is enabled today). */
+  /** Target architecture (automations are Scout-only today). */
   architecture: SkillArchitecture;
   /** Natural-language refinement for the current plan; omit for the first pass. */
   feedback?: string;
@@ -192,6 +208,8 @@ export interface StartResult {
 export interface StartOptions {
   /** Capture microphone narration for this session (opt-in, off by default). */
   narration?: boolean;
+  /** Source language to preserve in the transcript. Defaults to English. */
+  narrationLanguage?: NarrationLanguage;
   /** Device selected for the initial narration segment; defaults to the OS input. */
   microphoneDeviceId?: string;
 }
@@ -212,6 +230,12 @@ export interface DiscardResult {
 export interface MicrophoneResult {
   ok: boolean;
   state?: RecorderStatus["microphone"]["state"];
+  error?: string;
+}
+
+export interface NarrationLanguageResult {
+  ok: boolean;
+  language?: NarrationLanguage;
   error?: string;
 }
 
@@ -295,6 +319,7 @@ export const IPC = {
   stop: "recorder:stop",
   discard: "recorder:discard",
   microphone: "recorder:microphone",
+  narrationLanguage: "recorder:narration-language",
   microphoneSettings: "microphone:settings",
   microphoneNarration: "microphone:narration",
   microphoneDevice: "microphone:device",
@@ -338,6 +363,7 @@ export interface SkillRecorderApi {
   stop(): Promise<StopResult>;
   discard(): Promise<DiscardResult>;
   setMicrophoneEnabled(enabled: boolean): Promise<MicrophoneResult>;
+  setNarrationLanguage(language: NarrationLanguage): Promise<NarrationLanguageResult>;
   microphoneSettings(): Promise<MicrophoneSettingsStatus>;
   setNarrationEnabled(enabled: boolean): Promise<MicrophoneSettingsResult>;
   selectMicrophone(deviceId: string): Promise<MicrophoneSettingsResult>;
@@ -373,11 +399,13 @@ export interface SkillRecorderApi {
    */
   buildSkill(input: SkillBuildInput): Promise<SkillPlanResult>;
   /**
-   * Finalize the (user-edited) skill plan and export its SKILL.md into the target
-   * agent. The edited plan the user sees is authoritative — the body is written
-   * from exactly these inputs and steps.
+   * Finalize the (user-edited) skill plan and place its SKILL.md. The edited plan the
+   * user sees is authoritative — the body is written from exactly these inputs and steps.
+   * `placement` picks the destination: `"install"` writes into the target agent's live
+   * skills folder (Scout); `"export"` prompts for a folder and downloads it there (the
+   * only option for Cowork). Defaults to `"install"`.
    */
-  createSkill(sessionId: string, plan: SkillPlan): Promise<SkillCreateResult>;
+  createSkill(sessionId: string, plan: SkillPlan, placement?: SkillPlacement): Promise<SkillCreateResult>;
   /** Load a previously built skill for a session, if any. */
   getSkill(sessionId: string): Promise<BuiltSkill | null>;
   /** Abort an in-flight build. */
