@@ -1,4 +1,5 @@
-import { ipcMain, shell } from "electron";
+import { BrowserWindow, dialog, ipcMain, shell, type OpenDialogOptions } from "electron";
+import os from "node:os";
 import path from "node:path";
 
 import type {
@@ -11,6 +12,7 @@ import type {
   DeleteSessionResult,
   SkillBuildInput,
   SkillCreateResult,
+  SkillPlacement,
   SkillPlanResult,
   StartOptions,
 } from "../common/ipc";
@@ -25,7 +27,7 @@ import type { NarrationManager } from "./narration/manager";
 import type { RecorderController } from "./recorder/controller";
 import { isValidSessionId } from "./recorder/session-store";
 import { deleteSession, listSessions } from "./sessions";
-import { loadPersistedSkill, SkillBuilder } from "./skillbuilder/builder";
+import { loadPersistedSkill, SkillBuilder, type SkillTarget } from "./skillbuilder/builder";
 
 const log = createLogger("IPC");
 
@@ -163,17 +165,41 @@ export function registerIpc(
     }
   });
 
-  ipcMain.handle(IPC.createSkill, async (_event, sessionId: string, plan?: SkillPlan): Promise<SkillCreateResult> => {
-    if (!isValidSessionId(sessionId)) return { ok: false, error: "Unknown session." };
-    try {
-      const { skill, path: file } = await builder.create(sessionId, plan);
-      return { ok: true, skill, path: file };
-    } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
-      log.warn("create skill failed:", error);
-      return { ok: false, error };
-    }
-  });
+  ipcMain.handle(
+    IPC.createSkill,
+    async (
+      event,
+      sessionId: string,
+      plan?: SkillPlan,
+      placement: SkillPlacement = "install",
+    ): Promise<SkillCreateResult> => {
+      if (!isValidSessionId(sessionId)) return { ok: false, error: "Unknown session." };
+      try {
+        let target: SkillTarget = { kind: "install" };
+        if (placement === "export") {
+          // Export == download: let the user pick a destination folder; we drop a
+          // ready-to-use <name>/SKILL.md inside it. A dismissed dialog is a cancel, not an error.
+          const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+          const opts: OpenDialogOptions = {
+            title: "Export skill to folder",
+            defaultPath: path.join(os.homedir(), "Downloads"),
+            properties: ["openDirectory", "createDirectory"],
+          };
+          const result = win
+            ? await dialog.showOpenDialog(win, opts)
+            : await dialog.showOpenDialog(opts);
+          if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true };
+          target = { kind: "export", dir: result.filePaths[0] };
+        }
+        const { skill, path: file } = await builder.create(sessionId, plan, target);
+        return { ok: true, skill, path: file, placement };
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        log.warn("create skill failed:", error);
+        return { ok: false, error };
+      }
+    },
+  );
 
   ipcMain.handle(IPC.getSkill, (_event, sessionId: string) =>
     isValidSessionId(sessionId) ? loadPersistedSkill(sessionId) : null,
