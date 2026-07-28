@@ -496,8 +496,9 @@ function AnalysisWorkspace({
             <p>See what you did in this recording, step by step.</p>
             {voicePending && (
               <p className="voice-analysis-note">
-                Your voice is transcribed first, then analyzed. The first run downloads a ~250 MB
-                voice model once.
+                {narrationStatus?.model === "ready"
+                  ? "Your voice is transcribed first, then analyzed."
+                  : "Your voice is transcribed first, then analyzed. The first run downloads a ~250 MB voice model once."}
               </p>
             )}
             <button className="record-cta" onClick={run}>
