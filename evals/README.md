@@ -208,13 +208,11 @@ each scenario asserts the shape of the proposed `SkillPlan`:
   vocabulary is applied, not just present.
 - **typed steps** — `minCalculations` / `minActions` require the procedure to be
   split into `calculation` (no side effect) and `action` (changes the world) steps.
-- **confirmation** — `requiresConfirmation` requires at least one action to set
-  `pausesForConfirmation`, i.e. the send/create/delete surface pauses for the user.
 
 **Coverage.** Two scenarios: `price-tracker-skill` (a canonical page URL → **fixed**
-input, `web_fetch` + the `xlsx` skill, calculations then a confirmed append) and
+input, `web_fetch` + the `xlsx` skill, calculations then an append) and
 `github-issue-triage-skill` (the gh-vs-browser case as a skill — must use `gh`,
-forbid the browser, and gate the mutating comment/label actions).
+forbid the browser, and drive the mutating comment/label actions).
 
 ## Mock pages (`evals/mocks/`)
 

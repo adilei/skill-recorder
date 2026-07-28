@@ -89,7 +89,6 @@ const priceTracker: SkillBuilderScenario = {
     minInputs: 1,
     minCalculations: 1,
     minActions: 1,
-    requiresConfirmation: false,
   },
 };
 
@@ -170,7 +169,6 @@ const githubIssueTriage: SkillBuilderScenario = {
     minInputs: 1,
     minCalculations: 1,
     minActions: 1,
-    requiresConfirmation: true,
   },
 };
 
