@@ -48,9 +48,7 @@ if (-not (Have 'npm'))  { throw "npm is required but was not found on PATH." }
 $nodeMajor = [int](& node -p 'process.versions.node.split(".")[0]')
 if ($nodeMajor -lt 22) { throw "Node.js 22+ is required (found $(& node -v))." }
 
-if (-not (Have 'copilot')) {
-  Write-Warning "GitHub Copilot CLI ('copilot') not found on PATH. The app will launch, but recording analysis and skill/automation building need it — install it and sign in first."
-}
+# Copilot CLI check is deferred until after npm install (needs node_modules).
 
 # --- fetch source ----------------------------------------------------------
 $versionToken = ''
@@ -98,6 +96,21 @@ if (-not (Test-Path 'node_modules') -or ((Get-Content -LiteralPath $depsStamp -E
   Set-Content -LiteralPath $depsStamp -Value $depsNow
 } else {
   Info "Dependencies already up to date — skipping npm install."
+}
+
+# --- check for Copilot CLI (bundled in node_modules or via GitHub Copilot app) ---
+$copilotFound = $false
+$arch = if ([Environment]::Is64BitOperatingSystem -and [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x64' }
+$bundledCopilot = Join-Path $InstallDir "node_modules\@github\copilot-win32-$arch\copilot.exe"
+if (Test-Path -LiteralPath $bundledCopilot) {
+  $copilotFound = $true
+} elseif (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'Programs\GitHub Copilot\github.exe')) {
+  $copilotFound = $true
+} elseif (Have 'copilot') {
+  $copilotFound = $true
+}
+if (-not $copilotFound) {
+  Write-Warning "No Copilot CLI found. Install GitHub Copilot (https://github.com/features/copilot) or ensure the bundled package installed correctly. The app will launch, but recording analysis needs it."
 }
 
 # --- build (only when the source or dependencies changed) ------------------
