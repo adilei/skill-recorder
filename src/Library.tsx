@@ -250,8 +250,6 @@ function AnalysisWorkspace({
   const voiceEmpty = summary.hasNarration && summary.narrationSegmentCount === 0;
   const voiceBusy =
     narrationStatus?.activeSessionId === sessionId && narrationStatus.phase !== "idle";
-  const modelBusy =
-    narrationStatus?.phase === "downloading" || narrationStatus?.phase === "loading";
   const voiceError =
     narrationStatus?.activeSessionId == null || narrationStatus.activeSessionId === sessionId
       ? narrationStatus?.error
@@ -368,13 +366,6 @@ function AnalysisWorkspace({
     setAnalyzing(false);
   }, [sessionId]);
 
-  const transcribeVoice = useCallback(async () => {
-    setError(null);
-    const res = await window.skillRecorder.transcribeNarration(sessionId);
-    if (!res.ok) setError(res.error ?? "Could not transcribe this recording.");
-    await onChanged();
-  }, [sessionId, onChanged]);
-
   const startEdit = useCallback(() => {
     if (!analysis) return;
     setDraftTitle(analysis.title ?? "");
@@ -451,36 +442,11 @@ function AnalysisWorkspace({
       </div>
 
       <div className="ws-body">
-        {voicePending && (
-          <div className="voice-card quiet">
-            <div className="voice-card-copy">
-              <strong>Voice narration</strong>
-              <span>
-                {voiceBusy
-                  ? narrationWorkLabel(narrationStatus)
-                  : "Analyze includes your saved voice automatically — it transcribes first. You can also transcribe it now."}
-              </span>
-              {!voiceBusy && narrationStatus?.model !== "ready" && !voiceError && (
-                <span>First use downloads a one-time ~250 MB model.</span>
-              )}
-              {!voiceBusy && voiceError && (
-                <span className="voice-card-error">{voiceError}</span>
-              )}
-            </div>
-            <button
-              className="secondary"
-              disabled={voiceBusy || modelBusy}
-              onClick={() => void transcribeVoice()}
-            >
-              {voiceBusy || modelBusy
-                ? narrationWorkLabel(narrationStatus)
-                : narrationStatus?.model === "ready"
-                  ? "Transcribe now"
-                  : narrationStatus?.model === "error"
-                    ? "Try again"
-                    : "Download & transcribe"}
-            </button>
-          </div>
+        {voicePending && voiceError && !analyzing && (
+          <p className="voice-analysis-note">
+            Couldn't transcribe your voice, so this analysis doesn't include it. Your audio is saved —
+            analyzing again will retry.
+          </p>
         )}
 
         {voiceEmpty && (
