@@ -78,11 +78,14 @@ Each step has a short **label** and a **prompt** — an imperative instruction t
   user sees them in the plan. The automation must do exactly what its description says.
 - Keep it to a few ordered steps (roughly 2–6); each prompt tight and imperative.
 
-## Inputs (informational)
+## Inputs (fold them into the steps)
 
 List the things the task needs from outside in the plan's \`inputs\` with a likely source
-(locate / fixed — avoid provided). These are for the user's awareness; the automation
-resolves them inside the step prompts.
+(locate / fixed — avoid provided). At **build** time, resolve each input INSIDE the step
+prompt that uses it — a \`fixed\` input becomes its literal value/URL/path, a \`locate\`
+input becomes an instruction to find it on the device / read it from M365. An automation
+runs unattended and can't ask a human, so a prompt must never depend on an unresolved
+\`provided\` input.
 
 ## Your tools
 
