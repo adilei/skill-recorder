@@ -7,7 +7,6 @@ import { approveAll, type CopilotSession } from "@github/copilot-sdk";
 import {
   AutomationPlanSchema,
   BuiltAutomationSchema,
-  describeSchedule,
   planToAutomationSubmission,
   renderAutomationJson,
   toBuiltAutomation,
@@ -35,13 +34,6 @@ const KICKOFF_PROMPT =
   "propose_automation_plan with how you'll generalize this task, a sensible default schedule, and the " +
   "generalized prompt-steps. Stop after propose_automation_plan so the user can review it.";
 
-const CREATE_PROMPT =
-  "The user reviewed and edited the automation plan below. Build the automation from EXACTLY this plan — " +
-  "keep the same steps in the same order and do not add, drop, or reorder them. Call submit_automation " +
-  "with generalized, native-tool-first step prompts that follow the reviewed steps faithfully and fold in " +
-  "the inputs, resolving each one inside the prompts (an automation runs unattended and can't ask the " +
-  "user). The name, description, trigger, and schedule are already decided — echo them.";
-
 const msg = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
 /** Root folder automation bundles are exported into (overridable for dev/tests). */
@@ -55,8 +47,8 @@ interface LiveBuild extends BaseLive {
   sessionDir: string;
   architecture: SkillArchitecture;
   copilot: CopilotSession;
-  holder: { plan: AutomationPlan | undefined; submission: AutomationSubmission | undefined };
-  /** Last plan proposed this build (kept so submit can reference it). */
+  holder: { plan: AutomationPlan | undefined };
+  /** Last plan proposed this build (kept so create can reference it). */
   lastPlan: AutomationPlan | null;
 }
 
@@ -116,50 +108,32 @@ export class AutomationBuilder extends AgentBuilder<LiveBuild> {
     }
   }
 
-  /** Finalize the user-edited plan into an automation bundle and export it. Like the
-   *  Skill Builder, this runs one authoring turn: the reviewed trigger/schedule/name/
-   *  description stay authoritative (taken verbatim from the plan), while the agent
-   *  rewrites the ordered step prompts so they stay generalized, native-tool-first, and
-   *  fold in the reviewed inputs. If the agent doesn't submit, we fall back to the
-   *  reviewed steps verbatim so a build always yields a runnable bundle. */
+  /** Finalize the user-edited plan into an automation bundle and export it. The reviewed
+   *  plan fully determines the bundle, so this is deterministic — no agent turn. Each step
+   *  prompt's `{{id}}` value tokens are substituted for their literals at render time
+   *  ({@link toAutomationImport}), so what the user reviewed is exactly what ships. Throws
+   *  if the plan has no steps (a bundle needs ≥1). */
   async create(sessionId: string, editedPlan?: AutomationPlan): Promise<{ automation: BuiltAutomation; path: string }> {
     if (this.active.has(sessionId)) throw new Error("Wait for the current step to finish.");
-    let held = this.live.get(sessionId);
+    const held = this.live.get(sessionId);
     // Prefer the user's edited plan from the review tiles; fall back to the last
     // proposed plan for older callers that don't pass one.
     const plan = editedPlan ? AutomationPlanSchema.parse(editedPlan) : held?.lastPlan ?? null;
     if (!plan) throw new Error("There is no plan to build from yet.");
-    // Deterministic base from the reviewed tiles: validates ≥1 step and carries the
-    // authoritative trigger/schedule/name/description/model the agent must not change.
-    let base: AutomationSubmission;
+    // The reviewed tiles are the whole payload: validate ≥1 step and carry the
+    // trigger/schedule/name/description/model/values verbatim. No second agent turn.
+    let submission: AutomationSubmission;
     try {
-      base = planToAutomationSubmission(plan);
+      submission = planToAutomationSubmission(plan);
     } catch {
       throw new Error("Add at least one step before you create the automation.");
     }
-    // The pool may have evicted the live conversation while the user edited the plan;
-    // recreate one so create always works.
-    if (!held) held = await this.createLive(sessionId, plan.architecture);
-    const live = held;
-    live.lastPlan = plan;
+    if (held) held.lastPlan = plan;
 
     this.active.add(sessionId);
     try {
       this.emit(sessionId, "drafting", "Writing the automation…");
-      live.holder.submission = undefined;
-      try {
-        await live.copilot.sendAndWait(`${CREATE_PROMPT}\n\n${renderPlanForPrompt(plan)}`, TURN_TIMEOUT_MS);
-      } catch (err) {
-        await live.copilot.abort().catch(() => undefined);
-        throw new Error(`Automation build failed: ${msg(err)}`);
-      }
-      // Take only the agent-authored step prompts; everything else stays authoritative
-      // from the reviewed plan. If the agent didn't submit usable steps, ship the
-      // reviewed steps verbatim (the reviewed plan is already a complete payload).
-      const authored = live.holder.submission as AutomationSubmission | undefined;
-      const steps = authored?.steps.length ? authored.steps : base.steps;
-      const finalSubmission: AutomationSubmission = { ...base, steps };
-      const built = toBuiltAutomation(sessionId, plan.architecture, finalSubmission, plan);
+      const built = toBuiltAutomation(sessionId, plan.architecture, submission, plan);
       const exportPath = this.exportAutomation(built);
       const finalAutomation: BuiltAutomation = { ...built, exportedPath: exportPath, exportedAt: Date.now() };
       this.persist(sessionDir(sessionId), finalAutomation);
@@ -181,7 +155,7 @@ export class AutomationBuilder extends AgentBuilder<LiveBuild> {
     const analysis = loadPersistedAnalysis(sessionId);
     if (!analysis) throw new Error("There is no analysis for this recording yet.");
 
-    const holder: LiveBuild["holder"] = { plan: undefined, submission: undefined };
+    const holder: LiveBuild["holder"] = { plan: undefined };
     const tools = [
       ...createReadTools({
         sessionDir: dir,
@@ -193,9 +167,6 @@ export class AutomationBuilder extends AgentBuilder<LiveBuild> {
         onProgress: (m) => this.emit(sessionId, "working", m),
         onPlan: (p) => {
           holder.plan = p;
-        },
-        onSubmit: (s) => {
-          holder.submission = s;
         },
       }),
     ];
@@ -271,31 +242,7 @@ export class AutomationBuilder extends AgentBuilder<LiveBuild> {
   }
 }
 
-/** Render the final, user-edited plan into a compact spec the create turn builds from.
- *  Mirrors the Skill Builder's plan spec: the trigger/schedule/name/description are
- *  authoritative, and the inputs are listed so the agent can fold them into the prompts. */
-function renderPlanForPrompt(plan: AutomationPlan): string {
-  const lines = [`Title: ${plan.title}`, `Name: ${plan.name}`, `Description: ${plan.description}`];
-  if (plan.generalization) lines.push(`Generalization: ${plan.generalization}`);
-  lines.push("", `Trigger: ${plan.trigger.type}`, `Schedule: ${describeSchedule(plan.trigger.schedule)}`);
-  if (plan.trigger.type === "condition" && plan.trigger.condition) {
-    lines.push(`Condition: ${plan.trigger.condition}`);
-  }
-  if (plan.inputs.length) {
-    lines.push("", "Inputs:");
-    for (const i of plan.inputs) lines.push(`- ${i.name} [${i.source}]${i.detail ? `: ${i.detail}` : ""}`);
-  }
-  if (plan.steps.length) {
-    lines.push("", "Steps (in order):");
-    plan.steps.forEach((s, idx) => {
-      const head = [s.label, s.prompt].filter(Boolean).join(" — ");
-      lines.push(`${idx + 1}. ${head}`);
-    });
-  }
-  if (plan.model) lines.push("", `Model: ${plan.model}`);
-  return lines.join("\n");
-}
-
+/** Render the current plan into a compact spec for the refine prompt (the propose turn). */
 function renderRefinePrompt(feedback: string, prior: AutomationPlan | null): string {
   const lines = [
     "The user reviewed your proposed plan and wants changes. Revise the plan and call",
